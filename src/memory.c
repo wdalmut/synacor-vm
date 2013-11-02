@@ -15,7 +15,7 @@ void mem_reset(void)
 
 word mem_read(word addr)
 {
-    return memory[(int)addr];
+    return memory[addr];
 }
 
 void mem_write(int addr, word value)
