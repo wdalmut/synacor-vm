@@ -298,12 +298,10 @@ void out_state(void)
 
 void in_state(void)
 {
-	printf("SCANF: ");
-    size_t n = 100;
-    getline(&in_buffer, &n, stdin);
+	char value = getchar();
 
     word a = mem_arg(&PTR);
-    mem_write(a, (word)in_buffer[0]);
+    mem_write(a, value);
 }
 
 void noop_state(void)
