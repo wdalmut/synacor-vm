@@ -1,14 +1,10 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
-#define RAM_END 32768
-#define TOTAL_RAM (RAM_END+8)
 #define MODULO 32768
 
 #define SHOW_BOOTSTRAP 1
 #define DEBUG 0
-
-typedef unsigned short int word;
 
 void run_program(void);
 
@@ -34,8 +30,5 @@ void    ret_state(void);
 void    out_state(void);
 void    in_state(void);
 void    noop_state(void);
-
-word mem_resolve(word);
-
 
 #endif

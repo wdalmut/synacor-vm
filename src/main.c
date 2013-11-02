@@ -3,18 +3,9 @@
 #include <string.h>
 
 #include "main.h"
-
-// The memory
-word memory[TOTAL_RAM];
+#include "memory.h"
 
 char *in_buffer;
-
-struct _stack {
-    word value;
-    struct _stack *next;
-};
-typedef struct _stack stack;
-stack *STACK_HEAD = 0;
 
 word PTR = 0;
 
@@ -45,7 +36,7 @@ enum state_codes {
 
 int main(int argc, char **argv)
 {
-    memset(memory, 0, sizeof(memory));
+    mem_reset();
 
     if (argc != 2) {
         printf ("\nUsage: synacor-vm program.bin\n");
@@ -53,15 +44,13 @@ int main(int argc, char **argv)
     }
 
     FILE *program = fopen(argv[1], "rb");
-    int i=0;
-    word *mem = memory;
+    int i=0; word mem;
     while( !feof(program)) {
-        fread(mem, sizeof(word), 1, program);
-        ++mem;
+        fread(&mem, sizeof(word), 1, program);
+        mem_write(i++, mem);
 #if DEBUG == 1
         printf("%s (%d)\n", "read your program into memory...", memory[i]);
 #endif
-        ++i;
     }
 
 #if SHOW_BOOTSTRAP == 1
@@ -76,7 +65,8 @@ int main(int argc, char **argv)
 void run_program(void)
 {
     word command;
-    while((command = memory[PTR]) != 0) {
+    while(1 == 1) {
+    	command = mem_arg(&PTR);
         switch (command) {
             case halt:
                 halt_state();
@@ -150,15 +140,6 @@ void run_program(void)
     }
 }
 
-word mem_resolve(word data)
-{
-	if (data >= RAM_END) {
-		data = memory[data];
-	}
-
-	return data;
-}
-
 void halt_state(void)
 {
     exit(halt);
@@ -166,199 +147,167 @@ void halt_state(void)
 
 void set_state(void)
 {
-	word reg = memory[PTR+1];
-    memory[reg] = mem_resolve(memory[PTR+2]);
+	word a = mem_arg(&PTR);
+	word b = mem_resolve(mem_arg(&PTR));
 
-    PTR += 3;
+	mem_write(a, b);
 }
 
 void push_state(void)
 {
-    word value = mem_resolve(memory[PTR+1]);
-    stack *elem = (stack *)malloc(sizeof(stack));
-    elem->value = value;
-
-    elem->next = STACK_HEAD;
-    STACK_HEAD = elem;
-
-    PTR += 2;
+	word a = mem_resolve(mem_arg(&PTR));
+    mem_stack_push(a);
 }
 
 void pop_state(void)
 {
-    stack *elem = STACK_HEAD;
+	word a = mem_arg(&PTR);
+    word value = mem_stack_pop();
 
-    if (elem == NULL) {
-        printf("FATAL ERROR: EMPTY STACK!\n");
-        exit(1);
-    }
-
-    STACK_HEAD = elem->next;
-    word reg = memory[PTR+1];
-	memory[reg] = elem->value;
-
-    free(elem);
-
-    PTR += 2;
+    mem_write(a, value);
 }
 
 void eq_state(void)
 {
-    word b = mem_resolve(memory[PTR+2]);
-    word c = mem_resolve(memory[PTR+3]);
+	word a = mem_arg(&PTR);
+	word b = mem_resolve(mem_arg(&PTR));
+	word c = mem_resolve(mem_arg(&PTR));
 
-    word reg = memory[PTR+1];
-    memory[reg] = 0;
+	mem_write(a, 0);
     if (b == c) {
-		memory[reg] = 1;
+		mem_write(a, 1);
     }
-
-    PTR += 4;
 }
 
 void gt_state(void)
 {
-    word b = mem_resolve(memory[PTR+2]);
-    word c = mem_resolve(memory[PTR+3]);
+	word a = mem_arg(&PTR);
+    word b = mem_resolve(mem_arg(&PTR));
+    word c = mem_resolve(mem_arg(&PTR));
 
-    word reg = memory[PTR+1];
-	memory[reg] = 0;
+    mem_write(a, 0);
     if (b > c) {
-        memory[reg] = 1;
+        mem_write(a, 1);
     }
-
-    PTR += 4;
 }
 
 void jmp_state(void)
 {
-    PTR = memory[PTR+1];
+    PTR = mem_arg(&PTR);
 }
 
 void jt_state(void)
 {
-    if (mem_resolve(memory[PTR+1]) != 0) {
-        PTR = mem_resolve(memory[PTR+2]);
-    } else {
-    	PTR += 3;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+    if (mem_resolve(a) != 0) {
+        PTR = mem_resolve(b);
     }
 }
 
 void jf_state(void)
 {
-    if (mem_resolve(memory[PTR+1]) == 0) {
-        PTR = mem_resolve(memory[PTR+2]);
-    } else {
-        PTR += 3;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+    if (mem_resolve(a) == 0) {
+        PTR = mem_resolve(b);
     }
 }
 
 void add_state(void)
 {
-	word reg = memory[PTR+1];
-	memory[reg] = (mem_resolve(memory[PTR+2]) + mem_resolve(memory[PTR+3])) % MODULO;
-    PTR += 4;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	word c = mem_arg(&PTR);
+	mem_write(a, (mem_resolve(b) + mem_resolve(c)) % MODULO);
 }
 
 void mult_state(void)
 {
-
-	word reg = memory[PTR+1];
-	memory[reg] = (mem_resolve(memory[PTR+2]) * mem_resolve(memory[PTR+3])) % MODULO;
-    PTR += 4;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	word c = mem_arg(&PTR);
+	mem_write(a, (mem_resolve(b) * mem_resolve(c)) % MODULO);
 }
 
 void mod_state(void)
 {
-	word reg = memory[PTR+1];
-	memory[reg] = (mem_resolve(memory[PTR+2]) % mem_resolve(memory[PTR+3]));
-    PTR += 4;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	word c = mem_arg(&PTR);
+	mem_write(a, (mem_resolve(b) % mem_resolve(c)));
 }
 
 void and_state(void)
 {
-	word reg = memory[PTR+1];
-	memory[reg] = mem_resolve(memory[PTR+2]) & mem_resolve(memory[PTR+3]);
-    PTR += 4;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	word c = mem_arg(&PTR);
+	mem_write(a, mem_resolve(b) & mem_resolve(c));
 }
 
 void or_state(void)
 {
-	word reg = memory[PTR+1];
-	memory[reg] = mem_resolve(memory[PTR+2]) | mem_resolve(memory[PTR+3]);
-    PTR += 4;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	word c = mem_arg(&PTR);
+	mem_write(a, mem_resolve(b) | mem_resolve(c));
 }
 
 void not_state(void)
 {
-	word reg = memory[PTR+1];
-	memory[reg] = mem_resolve(memory[PTR+2]) ^ 0x7FFF;
-    PTR += 3;
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
+	mem_write(a, mem_resolve(b) ^ 0x7FFF);
 }
 
 void rmem_state(void)
 {
-	word a = memory[PTR+1];
-	word b = memory[PTR+2];
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
 
-    memory[a] = memory[mem_resolve(b)];
-    PTR += 3;
+    mem_write(a, mem_read(mem_resolve(b)));
 }
 
 void wmem_state(void)
 {
-	word a = memory[PTR+1];
-	word b = memory[PTR+2];
+	word a = mem_arg(&PTR);
+	word b = mem_arg(&PTR);
 
-	memory[mem_resolve(a)] = mem_resolve(b);
-
-   	PTR += 3;
+	mem_write(mem_resolve(a), mem_resolve(b));
 }
 
 void call_state(void)
 {
-    stack *elem = (stack *)malloc(sizeof(stack));
+	word a = mem_resolve(mem_arg(&PTR));
 
-    elem->value = PTR+2;
-    elem->next = STACK_HEAD;
-    STACK_HEAD = elem;
-
-    PTR = mem_resolve(memory[PTR+1]);
+	mem_stack_push(PTR);
+	PTR = a;
 }
 
 void ret_state(void)
 {
-    if (STACK_HEAD == NULL) {
-        printf("FATAL ERROR: EMPTY STACK!\n");
-        exit(1);
-    }
-
-    stack *elem = STACK_HEAD;
-    STACK_HEAD = elem->next;
-
-    PTR = elem->value;
+    PTR = mem_stack_pop();
 }
 
 void out_state(void)
 {
-    printf("%c", mem_resolve(memory[PTR+1]));
-
-    PTR += 2;
+	word a = mem_arg(&PTR);
+    printf("%c", mem_resolve(a));
 }
 
 void in_state(void)
 {
-	    printf("SCANF: ");
+	printf("SCANF: ");
     size_t n = 100;
     getline(&in_buffer, &n, stdin);
 
-    word reg = memory[PTR+1];
-    memory[reg] = (word)in_buffer[0];
-    PTR += 2;
+    word a = mem_arg(&PTR);
+    mem_write(a, (word)in_buffer[0]);
 }
 
 void noop_state(void)
 {
-    PTR += 1;
+
 }
 
