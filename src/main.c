@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     mem_reset();
 
     if (argc != 2) {
-        printf ("\nUsage: synacor-vm program.bin\n");
+        printf ("\nUsage: synacor-vm <program.bin>\n\n");
         exit(1);
     }
 

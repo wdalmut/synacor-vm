@@ -1,10 +1,12 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+#include <stdint.h>
+
 #define RAM_END 32768
 #define TOTAL_RAM (RAM_END+8)
 
-typedef unsigned short int word;
+typedef uint16_t word;
 
 struct _stack {
     word value;
