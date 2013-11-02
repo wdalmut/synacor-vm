@@ -13,7 +13,8 @@ build: clean
 	${MKDIR} -p build
 	${CC} ${CFLAGS} -c -I src -o build/main.o src/main.c
 	${CC} ${CFLAGS} -c -I src -o build/memory.o src/memory.c
-	${CC} ${CFLAGS} -I src -o ${EXEC} build/main.o build/memory.o
+	${CC} ${CFLAGS} -c -I src -o build/cpu.o src/cpu.c
+	${CC} ${CFLAGS} -I src -o ${EXEC} build/main.o build/memory.o build/cpu.o
 
 clean:
 	${RM} -rf bin

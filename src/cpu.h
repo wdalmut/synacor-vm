@@ -1,10 +1,7 @@
-#ifndef __MAIN_H__
-#define __MAIN_H__
+#ifndef __CPU_H__
+#define __CPU_H__
 
 #define MODULO 32768
-
-#define SHOW_BOOTSTRAP 1
-#define DEBUG 0
 
 void run_program(void);
 
@@ -32,3 +29,4 @@ void    in_state(void);
 void    noop_state(void);
 
 #endif
+
