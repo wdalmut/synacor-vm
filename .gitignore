@@ -1,0 +1,8 @@
+*.sw*
+build
+synacor-vm
+
+.cproject
+.settings
+.buildpath
+.project
